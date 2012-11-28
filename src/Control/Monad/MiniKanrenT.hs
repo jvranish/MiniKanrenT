@@ -1,10 +1,13 @@
 
 {-#Language GeneralizedNewtypeDeriving
           , DeriveDataTypeable
-          , FlexibleInstances
-          , TypeSynonymInstances #-}
+          #-}
 
-module Control.Monad.MiniKanrenT where
+module Control.Monad.MiniKanrenT 
+  (module Control.Monad.LogicVarT
+  , MiniKanrenT 
+  , run, fresh, (===), conde, condi, successful, unsuccessful, is, readVar
+  ) where
 
 import Control.Applicative
 
@@ -45,3 +48,5 @@ unsuccessful = mzero
 is :: (Unifiable a) => a -> MiniKanrenT m (LVar a)
 is a = MiniKanrenT $ newBoundLVar a
 
+readVar :: (Typeable a) => LVar a -> MiniKanrenT m (Maybe a)
+readVar a = MiniKanrenT $ readLVar a

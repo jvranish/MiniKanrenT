@@ -32,7 +32,6 @@ insertMany set v (LMap t) = LMap $
 insert :: (Typeable a) => Key -> a -> LMap -> LMap
 insert (Key k) v (LMap t) = case IntMap.lookup k t of
   Just (_, set) -> insertMany set (toDyn v) (LMap t)
-  -- IntMap.union (fromSet (const (toDyn v, set)) set)  t
   Nothing       -> LMap $ IntMap.insert k (toDyn v, IntSet.singleton k) t
 
 lookup :: (Typeable a) => Key -> LMap -> Maybe a
