@@ -20,6 +20,7 @@ Library
     Build-Depends: base >= 4 && < 5,
                    containers -any,
                    transformers  >= 0.2.2.0,
+                   syb >= 0.3,
                    logict -any
 
     Exposed-Modules:
