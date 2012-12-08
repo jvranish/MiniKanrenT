@@ -29,10 +29,13 @@ data LVar a = LVar { lvarKey :: IntMap.Key, lvarValue :: Maybe a }
   deriving (Eq, Ord, Data, Typeable)
 
 instance (Data a, Show a) => Show (LVar a) where
-  show (LVar k Nothing) = "_" ++ (varNames !! k)
-  show (LVar k (Just a)) | reachable k IntSet.empty a = "( _" ++ (varNames !! k) ++ ": " ++ show a ++ ")"
-  show (LVar _ (Just a)) = show a
-
+  showsPrec n (LVar k a') = case a' of
+      Nothing -> showString varName
+      Just a | reachable k IntSet.empty a -> 
+        showParen (n >= 11) $ showString (varName ++ ": ") . showsPrec 0 a
+      Just a -> showsPrec n a
+    where
+      varName = "_" ++ (varNames !! k)
 
 data Keys = Keys IntMap.Key Keys
 
@@ -93,6 +96,7 @@ unrollLVars = unrollLVars' IntSet.empty
     unrollLVars' traversed a = ext1M (gmapM (unrollLVars' traversed)) (unrollLVar traversed) a
 
     unrollLVar :: (Monad m, Data a) => IntSet.IntSet -> LVar a -> LogicVarT m (LVar a)
+    unrollLVar traversed (LVar key _) | IntSet.member key traversed = return $ LVar key Nothing
     unrollLVar traversed (LVar key a) = do
       (nextA, newKey) <- LogicVarT $ gets $ \(LVarData _ t) -> 
         case IntMap.lookup key t of
@@ -106,6 +110,7 @@ reachable key traversed = ext1Q (or . gmapQ (reachable key traversed)) reachable
   where
     reachable' :: (Data a) => LVar a -> Bool
     reachable' (LVar k Nothing) = k == key
+    reachable' (LVar k _) | IntSet.member k traversed = False
     reachable' (LVar k (Just a)) = or $ gmapQ (reachable key (IntSet.insert k traversed)) a
 
 makeSupply :: [[a]] -> [[a]] -> [[a]]

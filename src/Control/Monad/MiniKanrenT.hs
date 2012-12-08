@@ -6,7 +6,7 @@ module Control.Monad.MiniKanrenT
   ( LVar, lvarKey, lvarValue
   , MiniKanren, MiniKanrenT, Unifiable(..)
   , run, runT
-  , fresh
+  , freshLVar
   , conde, condi
   , successful, unsuccessful
   , newLVar, unifyLVar
@@ -34,13 +34,14 @@ instance MonadTrans MiniKanrenT where
 type MiniKanren = MiniKanrenT Identity
 
 run :: (Data a) => Int -> MiniKanren a -> [a]
-run n (MiniKanrenT m) = runIdentity $ observeManyT n (runLogicVarT (m >>= unrollLVars))
+run n (MiniKanrenT m) = runIdentity $ 
+  observeManyT n (runLogicVarT (m >>= unrollLVars))
 
 runT :: (Monad m, Data a) => Int -> MiniKanrenT m a -> m [a]
 runT n (MiniKanrenT m) = observeManyT n (runLogicVarT (m >>= unrollLVars))
 
-fresh :: (Data a) => MiniKanrenT m (LVar a)
-fresh = MiniKanrenT $ newUnboundLVar
+freshLVar :: (Data a) => MiniKanrenT m (LVar a)
+freshLVar = MiniKanrenT $ newUnboundLVar
 
 conde :: (Monad m) => [MiniKanrenT m ()] -> MiniKanrenT m () -> MiniKanrenT m ()
 conde xs e = ifte (msum xs) return e
@@ -68,7 +69,7 @@ unifyLVar a b = do
     unifyLVar' Nothing _ = MiniKanrenT $ bindLVar a b
     unifyLVar' _ Nothing = MiniKanrenT $ bindLVar b a
     unifyLVar' (Just aVal) (Just bVal) = do
-      MiniKanrenT $  bindLVar a b
+      MiniKanrenT $ bindLVar a b
       unifyValue aVal bVal
 
 

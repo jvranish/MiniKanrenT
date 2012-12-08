@@ -24,7 +24,10 @@ Library
                    logict -any
 
     Exposed-Modules:
+        Control.Monad.MiniKanren
         Control.Monad.MiniKanrenT
+        Control.Monad.MiniKanrenT.Term
+        Control.Monad.LogicVarT
 
     ghc-options:        -Wall
     hs-source-dirs:     src
