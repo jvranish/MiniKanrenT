@@ -1,12 +1,15 @@
 
 {-#Language GeneralizedNewtypeDeriving
-          , DeriveDataTypeable
           #-}
 
 module Control.Monad.MiniKanrenT 
-  (module Control.Monad.LogicVarT
-  , MiniKanrenT 
-  , run, fresh, (===), conde, condi, successful, unsuccessful, is, readVar
+  ( LVar, lvarKey, lvarValue
+  , MiniKanren, MiniKanrenT, Unifiable(..)
+  , run, runT
+  , fresh
+  , conde, condi
+  , successful, unsuccessful
+  , newLVar, unifyLVar
   ) where
 
 import Control.Applicative
@@ -16,6 +19,10 @@ import Control.Monad.Logic
 import Control.Monad.LogicVarT
 
 import Data.Data
+import Data.Functor.Identity
+
+class (Data a) => Unifiable a where
+  unifyValue :: (Monad m) => a -> a -> MiniKanrenT m ()
 
 newtype MiniKanrenT m a = MiniKanrenT (LogicVarT (LogicT m) a)
   deriving (Monad, Applicative,
@@ -24,14 +31,16 @@ newtype MiniKanrenT m a = MiniKanrenT (LogicVarT (LogicT m) a)
 instance MonadTrans MiniKanrenT where
   lift m = MiniKanrenT $ lift $ lift m
 
-run :: (Monad m) => Int -> MiniKanrenT m a -> m [a]
-run n (MiniKanrenT m) = observeManyT n (runLogicVarT m)
+type MiniKanren = MiniKanrenT Identity
 
-fresh :: (Typeable a) => MiniKanrenT m (LVar a)
-fresh = MiniKanrenT $ newLVar
+run :: (Data a) => Int -> MiniKanren a -> [a]
+run n (MiniKanrenT m) = runIdentity $ observeManyT n (runLogicVarT (m >>= unrollLVars))
 
-(===) :: (Unifiable a) => LVar a -> LVar a -> MiniKanrenT m ()
-a === b = MiniKanrenT $ unifyLVar a b
+runT :: (Monad m, Data a) => Int -> MiniKanrenT m a -> m [a]
+runT n (MiniKanrenT m) = observeManyT n (runLogicVarT (m >>= unrollLVars))
+
+fresh :: (Data a) => MiniKanrenT m (LVar a)
+fresh = MiniKanrenT $ newUnboundLVar
 
 conde :: (Monad m) => [MiniKanrenT m ()] -> MiniKanrenT m () -> MiniKanrenT m ()
 conde xs e = ifte (msum xs) return e
@@ -45,8 +54,21 @@ successful = return ()
 unsuccessful :: (MonadPlus m) => m ()
 unsuccessful = mzero
 
-is :: (Unifiable a) => a -> MiniKanrenT m (LVar a)
-is a = MiniKanrenT $ newBoundLVar a
+newLVar :: (Unifiable a, Data a) => a -> MiniKanrenT m (LVar a)
+newLVar a = MiniKanrenT $ newBoundLVar a
 
-readVar :: (Typeable a) => LVar a -> MiniKanrenT m (Maybe a)
-readVar a = MiniKanrenT $ readLVar a
+unifyLVar :: (Monad m, Unifiable a) => LVar a -> LVar a -> MiniKanrenT m ()
+unifyLVar a b = do
+    theSame <- MiniKanrenT $ eqLVar a b
+    when (not $ theSame) $ do
+      a' <- MiniKanrenT $ readLVar a
+      b' <- MiniKanrenT $ readLVar b
+      unifyLVar' a' b'
+  where
+    unifyLVar' Nothing _ = MiniKanrenT $ bindLVar a b
+    unifyLVar' _ Nothing = MiniKanrenT $ bindLVar b a
+    unifyLVar' (Just aVal) (Just bVal) = do
+      MiniKanrenT $  bindLVar a b
+      unifyValue aVal bVal
+
+

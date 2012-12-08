@@ -2,12 +2,12 @@ Name: MiniKanrenT
 Synopsis: miniKanren in Haskell
 Description: An implementation of miniKanren (a logic programming language embedded in Scheme) in Haskell 
 Version: 0.0.1
-License: BSD3
+License: MIT
 License-File: LICENSE.txt
 Author: Job Vranish <job.vranish@gmail.com>
 Maintainer: Job Vranish
 Stability: experimental
-Category: Language
+Category: Logic
 Cabal-Version: >= 1.10.1.0
 Build-Type: Simple
 
