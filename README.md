@@ -15,6 +15,7 @@ If you want to make it work with your own type you can basically just replicate 
 As far as I know the semantics are essantially the same except:
 
  - Logic variables are typed (and you can define your own custom types)
+ - conde is actually condi and it doesn't have an else clause (as it doesn't do anything special anyway)
  - My implementation will not go into an infinite loop if a unification is circular. There is no "occurs check" and it doesn't need one.
 
 ### Origins
