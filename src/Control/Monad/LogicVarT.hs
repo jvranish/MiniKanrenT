@@ -23,10 +23,21 @@ import Data.Dynamic
 import qualified Data.IntSet as IntSet
 import qualified Data.IntMap as IntMap
 
-import Data.Generics.Aliases
+import Data.Generics.Aliases hiding (GT)
 
 data LVar a = LVar { lvarKey :: IntMap.Key, lvarValue :: Maybe a }
-  deriving (Eq, Ord, Data, Typeable)
+  deriving (Data, Typeable)
+
+instance (Eq a) => Eq (LVar a) where
+  (LVar a Nothing) == (LVar b Nothing) = a == b 
+  (LVar _ (Just a)) == (LVar _ (Just b)) = a == b 
+  _ == _ = False
+
+instance (Ord a) => Ord (LVar a) where
+  compare (LVar a Nothing) (LVar b Nothing) = compare a b
+  compare (LVar _ (Just a)) (LVar _ (Just b)) = compare a b
+  compare (LVar _ (Just _)) (LVar _ Nothing) = GT
+  compare (LVar _ Nothing) (LVar _ (Just _)) = LT
 
 instance (Data a, Show a) => Show (LVar a) where
   showsPrec n (LVar k a') = case a' of
@@ -117,5 +128,5 @@ makeSupply :: [[a]] -> [[a]] -> [[a]]
 makeSupply inits tails = let vars = inits ++ (liftA2 (++) vars tails) in vars
 
 varNames :: [String]
-varNames = makeSupply (words "A B C D E F G H I J K") (words "1 2 3 4 5")
+varNames = makeSupply (words "a b c d e f g h i j k") (words "1 2 3 4 5")
 

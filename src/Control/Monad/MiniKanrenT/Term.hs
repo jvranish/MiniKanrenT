@@ -29,25 +29,25 @@ instance Unifiable Term where
 
 -- This class is just for convenience. It makes it much easier to construct 
 --  terms and makes our unification operator (===) much more flexible
-class NewTerm a where
+class CanBeTerm a where
   newTerm :: (Monad m) => a -> MiniKanrenT m (LVar Term)
 
-instance NewTerm String where
+instance CanBeTerm String where
   newTerm s = newLVar $ Symbol s
 
-instance (NewTerm a, NewTerm b) => NewTerm (a, b) where
+instance (CanBeTerm a, CanBeTerm b) => CanBeTerm (a, b) where
   newTerm (a, b) = do
     a' <- newTerm a
     b' <- newTerm b
     newLVar $ Cons a' b'
 
-instance NewTerm () where
+instance CanBeTerm () where
   newTerm () = newLVar Nil
 
-instance NewTerm Term where
+instance CanBeTerm Term where
   newTerm a = newLVar a
 
-instance NewTerm (LVar Term) where
+instance CanBeTerm (LVar Term) where
   newTerm a = return a
 
 
@@ -56,7 +56,7 @@ instance NewTerm (LVar Term) where
 fresh :: MiniKanrenT m (LVar Term)
 fresh = freshLVar
 
-(===) :: (Monad m, NewTerm a, NewTerm b) => a -> b -> MiniKanrenT m ()
+(===) :: (Monad m, CanBeTerm a, CanBeTerm b) => a -> b -> MiniKanrenT m ()
 a === b = do
   a' <- newTerm a
   b' <- newTerm b

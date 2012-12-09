@@ -5,7 +5,7 @@
 module Control.Monad.MiniKanrenT 
   ( LVar, lvarKey, lvarValue
   , MiniKanren, MiniKanrenT, Unifiable(..)
-  , run, runT
+  , run, runAll, runT, runAllT
   , freshLVar
   , conde, condi
   , successful, unsuccessful
@@ -33,6 +33,10 @@ instance MonadTrans MiniKanrenT where
 
 type MiniKanren = MiniKanrenT Identity
 
+runAll :: (Data a) => MiniKanren a -> [a]
+runAll (MiniKanrenT m) = runIdentity $ 
+  observeAllT (runLogicVarT (m >>= unrollLVars))
+
 run :: (Data a) => Int -> MiniKanren a -> [a]
 run n (MiniKanrenT m) = runIdentity $ 
   observeManyT n (runLogicVarT (m >>= unrollLVars))
@@ -40,14 +44,17 @@ run n (MiniKanrenT m) = runIdentity $
 runT :: (Monad m, Data a) => Int -> MiniKanrenT m a -> m [a]
 runT n (MiniKanrenT m) = observeManyT n (runLogicVarT (m >>= unrollLVars))
 
+runAllT :: (Monad m, Data a) => MiniKanrenT m a -> m [a]
+runAllT (MiniKanrenT m) = observeAllT (runLogicVarT (m >>= unrollLVars))
+
 freshLVar :: (Data a) => MiniKanrenT m (LVar a)
 freshLVar = MiniKanrenT $ newUnboundLVar
 
 conde :: (Monad m) => [MiniKanrenT m ()] -> MiniKanrenT m () -> MiniKanrenT m ()
-conde xs e = ifte (msum xs) return e
+conde xs e = msum (xs ++ [e])
 
 condi :: (Monad m) => [MiniKanrenT m ()] -> MiniKanrenT m () -> MiniKanrenT m ()
-condi xs e = ifte (foldr interleave mzero xs) return e
+condi xs e = foldr interleave mzero (xs ++ [e])
 
 successful :: (Monad m) => m ()
 successful = return ()
