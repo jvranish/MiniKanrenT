@@ -8,9 +8,16 @@ clone the repository and open examples.hs like so:
 
 >  ghci -isrc examples.hs
   
-  
-### Origins
+If you want to make it work with your own type you can basically just replicate what's in Control.Monad.MiniKanrenT.Term replacing Term with your own type.
 
+### Differences in semantics from miniKanren
+
+As far as I know the semantics are essantially the same except:
+
+ - Logic variables are typed (and you can define your own custom types)
+ - My implementation will not go into an infinite loop if a unification is circular. There is no "occurs check" and it doesn't need one.
+
+### Origins
 
 This year at [strangeloop](https://thestrangeloop.com/)  I was totally blown away by the miniKanren talk by Daniel Friedman and William Byrd
 
