@@ -15,13 +15,15 @@ exampleMember = mapM_ print $ run 5 $ do
   membero "tofu" x
   return x
 
-membero :: (Monad m, CanBeTerm a) => a -> LVar Term -> MiniKanrenT m ()
+membero :: (MonadKanren m, CanBeTerm a) => a -> LVar Term -> m ()
 membero x xs = do
   h <- fresh
   t <- fresh
   xs === (Cons h t)
-  conde [h === x] $ do
-    membero x t
+  conde [ h === x
+        , membero x t
+        ]
+    
 
 
 -- Now for the classic genealogy example:
@@ -55,21 +57,21 @@ exampleFathers = mapM_ print $ nub $ runAll $ do
   father f c
   return f
 
-male :: (Monad m, CanBeTerm a) => a -> MiniKanrenT m ()
+male :: (MonadKanren m, CanBeTerm a) => a -> m ()
 male x = conde
   [ "Bob" === x
   , "Joe" === x
   , "Charlie" === x
-  ] unsuccessful
+  ]
 
-female :: (Monad m, CanBeTerm a) => a -> MiniKanrenT m ()
+female :: (MonadKanren m, CanBeTerm a) => a -> m ()
 female x = conde
   [ "Lisa" === x
   , "Jenny" === x
   , "Andromeda" === x
-  ] unsuccessful
+  ]
 
-parent :: (Monad m, CanBeTerm a, CanBeTerm b) => a -> b -> MiniKanrenT m ()
+parent :: (MonadKanren m, CanBeTerm a, CanBeTerm b) => a -> b -> m ()
 parent p c = conde
   [ "Lisa" === p >> "Bob" === c
   , "Lisa" === p >> "Andromeda" === c
@@ -77,20 +79,20 @@ parent p c = conde
   , "Joe" === p >> "Andromeda" === c
   , "Jenny" === p >> "Lisa" === c
   , "Jenny" === p >> "Charlie" === c
-  ] unsuccessful
+  ]
 
-sibling :: (Monad m, CanBeTerm a, CanBeTerm b) => a -> b -> MiniKanrenT m ()
+sibling :: (MonadKanren m, CanBeTerm a, CanBeTerm b) => a -> b -> m ()
 sibling x y = do
   p <- fresh
   parent p x
   parent p y
 
-mother :: (Monad m, CanBeTerm a, CanBeTerm b) => a -> b -> MiniKanrenT m ()
+mother :: (MonadKanren m, CanBeTerm a, CanBeTerm b) => a -> b -> m ()
 mother m c = do
   female m
   parent m c
 
-father :: (Monad m, CanBeTerm a, CanBeTerm b) => a -> b -> MiniKanrenT m ()
+father :: (MonadKanren m, CanBeTerm a, CanBeTerm b) => a -> b -> m ()
 father m c = do
   male m
   parent m c

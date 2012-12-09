@@ -4,9 +4,9 @@
           , TypeSynonymInstances
           #-}
 
-module Control.Monad.MiniKanrenT.Term where
+module Control.Monad.MiniKanren.Term where
 
-import Control.Monad.MiniKanrenT
+import Control.Monad.MiniKanren.Core
 
 import Data.Data
 
@@ -25,12 +25,10 @@ instance Unifiable Term where
     a2 === b2
   unifyValue _ _ = unsuccessful
 
-
-
 -- This class is just for convenience. It makes it much easier to construct 
 --  terms and makes our unification operator (===) much more flexible
 class CanBeTerm a where
-  newTerm :: (Monad m) => a -> MiniKanrenT m (LVar Term)
+  newTerm :: (MonadKanren m) => a -> m (LVar Term)
 
 instance CanBeTerm String where
   newTerm s = newLVar $ Symbol s
@@ -53,10 +51,10 @@ instance CanBeTerm (LVar Term) where
 
 -- Define fresh in terms of our type. This just tacks a type signature onto
 -- freshLVar to help the type inferrer out and make the error messages clearer
-fresh :: MiniKanrenT m (LVar Term)
+fresh :: (MonadKanren m) => m (LVar Term)
 fresh = freshLVar
 
-(===) :: (Monad m, CanBeTerm a, CanBeTerm b) => a -> b -> MiniKanrenT m ()
+(===) :: (MonadKanren m, CanBeTerm a, CanBeTerm b) => a -> b -> m ()
 a === b = do
   a' <- newTerm a
   b' <- newTerm b

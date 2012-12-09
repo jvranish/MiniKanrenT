@@ -1,8 +1,8 @@
 
 module Control.Monad.MiniKanren
-  ( module Control.Monad.MiniKanrenT
-  , module Control.Monad.MiniKanrenT.Term
+  ( module Control.Monad.MiniKanren.Core
+  , module Control.Monad.MiniKanren.Term
   ) where
 
-import Control.Monad.MiniKanrenT
-import Control.Monad.MiniKanrenT.Term
+import Control.Monad.MiniKanren.Core
+import Control.Monad.MiniKanren.Term
