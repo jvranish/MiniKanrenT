@@ -1,4 +1,4 @@
-Name: MiniKanren
+Name: MiniKanrenT
 Synopsis: miniKanren in Haskell
 Description: An implementation of miniKanren (a logic programming language embedded in Scheme) in Haskell 
 Version: 0.0.1
@@ -13,7 +13,7 @@ Build-Type: Simple
 
 source-repository head
   type: git
-  location: git@github.com:jvranish/MiniKanren.git
+  location: git@github.com:jvranish/MiniKanrenT.git
 
 Library
     Default-Language: Haskell2010
