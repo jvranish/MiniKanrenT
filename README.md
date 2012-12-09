@@ -3,6 +3,15 @@ MiniKanrenT
 
 An implementation of miniKanren in Haskell
 
+### To get started
+clone the repository and open examples.hs like so:
+
+>  ghci -isrc examples.hs
+  
+  
+### Origins
+
+
 This year at [strangeloop](https://thestrangeloop.com/)  I was totally blown away by the miniKanren talk by Daniel Friedman and William Byrd
 
 I _highly_ recommend watching [the presentation](http://www.infoq.com/presentations/miniKanren). It is simultaneously entertaining and mind blowing.
