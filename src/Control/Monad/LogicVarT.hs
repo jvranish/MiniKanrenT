@@ -47,6 +47,8 @@ instance (Data a, Show a) => Show (LVar a) where
       Just a -> showsPrec n a
     where
       varName = "_" ++ (varNames !! k)
+      makeSupply inits tails = let vars = inits ++ (liftA2 (++) vars tails) in vars
+      varNames = makeSupply (words "a b c d e f g h i j k") (words "1 2 3 4 5")
 
 data Keys = Keys IntMap.Key Keys
 
@@ -86,7 +88,7 @@ bindLVar x y = LogicVarT $ modify $ bindLVar' x y
       (_, set_a) <- IntMap.lookup key_a t
       -- This guard will bail us out if these keys are already bound together
       guard $ not $ IntSet.member key_b set_a
-      (v, set_b) <- IntMap.lookup key_b t -- #TODO if this fails, need to insert into map?  yes
+      (v, set_b) <- IntMap.lookup key_b t
       let set' = IntSet.union set_a set_b
       return $ LVarData keys $ IntMap.union (fromSet (const (v, set')) set') t
 
@@ -123,10 +125,4 @@ reachable key traversed = ext1Q (or . gmapQ (reachable key traversed)) reachable
     reachable' (LVar k Nothing) = k == key
     reachable' (LVar k _) | IntSet.member k traversed = False
     reachable' (LVar k (Just a)) = or $ gmapQ (reachable key (IntSet.insert k traversed)) a
-
-makeSupply :: [[a]] -> [[a]] -> [[a]]
-makeSupply inits tails = let vars = inits ++ (liftA2 (++) vars tails) in vars
-
-varNames :: [String]
-varNames = makeSupply (words "a b c d e f g h i j k") (words "1 2 3 4 5")
 
