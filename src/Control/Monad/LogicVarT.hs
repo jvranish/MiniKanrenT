@@ -2,6 +2,8 @@
           , DeriveDataTypeable #-}
 module Control.Monad.LogicVarT 
   ( LogicVarT
+  , Unifiable(..)
+  , MonadLogicVar(..)
   , LVar, lvarKey, lvarValue
   , runLogicVarT
   , newUnboundLVar, newBoundLVar
@@ -24,6 +26,40 @@ import qualified Data.IntSet as IntSet
 import qualified Data.IntMap as IntMap
 
 import Data.Generics.Aliases hiding (GT)
+
+class (Data a) => Unifiable a where
+  unifyValue :: (MonadLogicVar m) => a -> a -> m ()
+
+class (MonadPlus m) => MonadLogicVar m where
+  freshLVar :: (Data a) => m (LVar a)
+  newLVar :: (Data a) => a -> m (LVar a)
+  unifyLVar :: (Unifiable a) => LVar a -> LVar a -> m ()
+  --successful :: (Monad m) => m ()
+  successful :: m ()
+  successful = return ()
+
+  --unsuccessful :: (MonadPlus m) => m ()
+  unsuccessful :: m ()
+  unsuccessful = mzero
+
+instance Unifiable () where
+  unifyValue _ _ = successful
+
+instance (MonadPlus m) => MonadLogicVar (LogicVarT m) where
+  freshLVar = newUnboundLVar
+  newLVar a = newBoundLVar a
+  unifyLVar a b = do
+      theSame <- eqLVar a b
+      when (not $ theSame) $ do
+        a' <- readLVar a
+        b' <- readLVar b
+        unifyLVar' a' b'
+    where
+      unifyLVar' Nothing _ = bindLVar a b
+      unifyLVar' _ Nothing = bindLVar b a
+      unifyLVar' (Just aVal) (Just bVal) = do
+        bindLVar a b
+        unifyValue aVal bVal
 
 data LVar a = LVar { lvarKey :: IntMap.Key, lvarValue :: Maybe a }
   deriving (Data, Typeable)
