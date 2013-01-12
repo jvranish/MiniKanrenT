@@ -39,7 +39,7 @@ class (MonadPlus m) => MonadLogicVar m where
   successful = return ()
 
   --unsuccessful :: (MonadPlus m) => m ()
-  unsuccessful :: m ()
+  unsuccessful :: m a
   unsuccessful = mzero
 
 instance Unifiable () where

@@ -1,4 +1,4 @@
-{-#Language DeriveDataTypeable #-}
+{-#Language DeriveDataTypeable, DefaultSignatures #-}
 
 module Control.Monad.MiniKanren.List where
 
@@ -7,6 +7,9 @@ import Data.Data
 
 import Control.Monad.LogicVarT
 import Control.Monad.MiniKanren.Core
+import Control.Monad.MiniKanren.Tuple
+
+import Data.Generics.Text
 
 data List a = Cons (LVar a) (LVar (List a))
             | Nil
@@ -20,44 +23,24 @@ instance (Unifiable a) => Unifiable (List a) where
   unifyValue _ _ = unsuccessful
 
 instance (Unifiable a) => LogicMonoid (List a) where
-  logic_mempty = new $ Nil
-  logic_mappend a b = joinThunk $ do 
-    result <- fresh
-    conde
-      [ do
-          a === logic_mempty
-          b === result
-      , do
-          (t, h, t') <- fresh3
-          cons h t === a
-          cons h t' === result
-          logic_mappend t b === t'
-      ]
-    return result
+  logic_mempty = nil
+  logic_mappend a b = match (logic_append' b) a
+    where
+      -- Note that the order of the arguments was swapped
+      logic_append' b Nil = b
+      logic_append' b (Cons x xs) = cons (thunk x) (logic_mappend (thunk xs) b)
 
 instance LogicFunctor List where
-  logic_fmap f l = joinThunk $ do
-    (result, x, xs) <- fresh3
-    conde [ nil === l >> nil === result
-          , do
-              cons x xs === l
-              cons (f x) (logic_fmap f xs) === result
-          ]
-    
-    return result
+  logic_fmap f l = match (logic_fmap' f) l
+    where
+      logic_fmap' f Nil = nil
+      logic_fmap' f (Cons x xs) = cons (f $ thunk x) (logic_fmap f (thunk xs))
 
 instance LogicFoldable List where
-  logic_foldr f a l = joinThunk $ do
-    result <- fresh
-    conde [ do
-              nil === l
-              result === a
-          , do
-              (x, xs) <- fresh2
-              cons x xs === l
-              f x (logic_foldr f a xs) === result
-          ]
-    return result
+  logic_foldr f a l = match (logic_foldr' f a) l
+    where
+      logic_foldr' f a Nil = a
+      logic_foldr' f a (Cons x xs) = f (thunk x) (logic_foldr f a (thunk xs))
 
 instance (Unifiable a) => Matchable (List a) where
   match f a = joinThunk $ do
@@ -76,9 +59,18 @@ instance (Unifiable a) => Matchable (List a) where
     return result
 
 
-logic_fold f a = match (logic_fold' f a)
-logic_fold' f a Nil = a
-logic_fold' f a (Cons x xs) = f (thunk x) (logic_fold f a (thunk xs))
+--m a -> (a -> m b) -> m b
+--match, and, or, sequence
+--how do I take an lvar and extract the value out of it?
+
+
+--class Foo f where
+--  bla :: f a -> f String
+--  default bla :: (Functor f, Data a) => f a -> f String
+--  bla a = fmap gshow a
+
+
+--instance Foo Maybe where
 
 
 reifyList :: (Unifiable b, MonadKanren m)
@@ -86,27 +78,21 @@ reifyList :: (Unifiable b, MonadKanren m)
 reifyList _ [] = return $ new Nil
 reifyList f (x:xs) = liftM2 cons (f x) (reifyList f xs)
 
+logic_lookup :: (Unifiable k, Unifiable v, MonadKanren m)
+             => LogicThunk m k -> LogicThunk m (List (Tuple k v)) -> LogicThunk m v
+logic_lookup k xs = match (logic_lookup' k) xs
+  where
+    logic_lookup' k Nil = joinThunk unsuccessful
+    logic_lookup' k (Cons x xs) = joinThunk $ do
+      v <- fresh
+      conde [thunk x === tuple k v, v === logic_lookup k (thunk xs)]
+      return v
 
-
---remove unifiable?
---make fresh work on a typeclass
-
-
---logic_append
---  :: (LogicMonoid a, MonadKanren m) =>
---     LogicThunk m a -> LogicThunk m a -> LogicThunk m a
---logic_append a = match ((\x y -> logic_append y x) a)
-logic_append a b = match (logic_append' b) a
--- Note that the order of the arguments was swapped
-logic_append' b Nil = b
-logic_append' b (Cons x xs) = cons (thunk x) (logic_append (thunk xs) b)
-
-instance Unifiable () where
-  unifyValue _ _ = successful
-
-logic_elem a xs = match (logic_elem' a) xs
+logic_elem :: (Unifiable a, MonadKanren m)
+           => LogicThunk m a -> LogicThunk m (List a) -> m ()
+logic_elem a xs = match_ (logic_elem' a) xs
 logic_elem' _ Nil = unsuccessful
-logic_elem' a (Cons x xs) = conde [a === (thunk x), logic_elem a (thunk xs)]
+logic_elem' a (Cons x xs) = conde [a === thunk x, logic_elem a (thunk xs)]
 
 nil :: (Unifiable a, MonadKanren m) => LogicThunk m (List a)
 nil = new Nil
@@ -119,20 +105,4 @@ cons x xs = joinThunk $ do
   return $ new $ Cons x' xs'
 
 
-
---append Nil a = a
---append (Cons x xs) b = Cons x (append xs b)
-
---append([X|Y],Z,[X|W]) :- append(Y,Z,W).
---class LogicFunctor f where
---  logic_fmap :: (Unifiable a, Unifiable b)
---             => (LogicThunk a -> LogicThunk b) 
---                 -> LogicThunk (f a) -> LogicThunk (f b)
-
---instance LogicFunctor List where
---  logic_fmap f l = joinThunk $ do
---    (result, x, xs) <- fresh'
---    cons x xs === l
---    cons (f x) (logic_fmap f xs) === result
---    return result
 
