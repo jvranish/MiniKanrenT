@@ -24,11 +24,11 @@ instance (Unifiable a) => Unifiable (List a) where
 
 instance (Unifiable a) => LogicMonoid (List a) where
   logic_mempty = nil
-  logic_mappend a b = match (logic_append' b) a
+  logic_mappend a b = match (logic_append' b) (return a)
     where
       -- Note that the order of the arguments was swapped
-      logic_append' b Nil = b
-      logic_append' b (Cons x xs) = cons (thunk x) (logic_mappend (thunk xs) b)
+      logic_append' b Nil = return b
+      logic_append' b (Cons x xs) = cons (thunk x) (logic_mappend xs b)
 
 instance LogicFunctor List where
   logic_fmap f l = match (logic_fmap' f) l
@@ -43,7 +43,7 @@ instance LogicFoldable List where
       logic_foldr' f a (Cons x xs) = f (thunk x) (logic_foldr f a (thunk xs))
 
 instance (Unifiable a) => Matchable (List a) where
-  match f a = joinThunk $ do
+  match f a = do
     result <- fresh
     conde
       [ do
@@ -52,11 +52,11 @@ instance (Unifiable a) => Matchable (List a) where
       , do
           (x, xs) <- fresh2
           cons x xs === a
-          x' <- evalThunk x
-          xs' <- evalThunk xs
+          x' <- x
+          xs' <- xs
           f (Cons x' xs') === result
       ]
-    return result
+    result
 
 
 --m a -> (a -> m b) -> m b
@@ -82,11 +82,11 @@ logic_lookup :: (Unifiable k, Unifiable v, MonadKanren m)
              => LogicThunk m k -> LogicThunk m (List (Tuple k v)) -> LogicThunk m v
 logic_lookup k xs = match (logic_lookup' k) xs
   where
-    logic_lookup' k Nil = joinThunk unsuccessful
-    logic_lookup' k (Cons x xs) = joinThunk $ do
+    logic_lookup' k Nil = unsuccessful
+    logic_lookup' k (Cons x xs) = do
       v <- fresh
       conde [thunk x === tuple k v, v === logic_lookup k (thunk xs)]
-      return v
+      v
 
 logic_elem :: (Unifiable a, MonadKanren m)
            => LogicThunk m a -> LogicThunk m (List a) -> m ()
@@ -99,10 +99,10 @@ nil = new Nil
 
 cons :: (Unifiable a, MonadKanren m)
      => LogicThunk m a -> LogicThunk m (List a) -> LogicThunk m (List a)
-cons x xs = joinThunk $ do
-  x' <- evalThunk x
-  xs' <- evalThunk xs
-  return $ new $ Cons x' xs'
+cons x xs = do
+  x' <- x
+  xs' <- xs
+  new $ Cons x' xs'
 
 
 

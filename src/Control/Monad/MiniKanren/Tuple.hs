@@ -19,23 +19,23 @@ instance (Unifiable a, Unifiable b) => Unifiable (Tuple a b) where
     unifyLVar a2 b2
 
 instance (Unifiable a, Unifiable b) => Matchable (Tuple a b) where
-  match f x = joinThunk $ do
+  match f x = do
     (result, a, b) <- fresh3
     tuple a b === x
-    a' <- evalThunk a
-    b' <- evalThunk b
+    a' <- a
+    b' <- b
     f (Tuple a' b') === result
-    return result
+    result
 
 reifyTuple :: (Unifiable a, Unifiable b, MonadKanren m) => (m (LogicThunk m a), m (LogicThunk m b)) -> m (LogicThunk m (Tuple a b))
 reifyTuple (a, b) = liftM2 tuple a b
 
 tuple :: (Unifiable a, Unifiable b, MonadKanren m)
      => LogicThunk m a -> LogicThunk m b -> LogicThunk m (Tuple a b)
-tuple a b = joinThunk $ do
-  a' <- evalThunk a
-  b' <- evalThunk b
-  return $ new $ Tuple a' b'
+tuple a b = do
+  a' <- a
+  b' <- b
+  new $ Tuple a' b'
 
 
 
