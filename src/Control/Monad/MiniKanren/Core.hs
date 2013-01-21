@@ -6,9 +6,9 @@ module Control.Monad.MiniKanren.Core
   , MiniKanren, MiniKanrenT, Unifiable(..)
   , fresh2, fresh3, fresh4
   , run, runAll, runT, runAllT
-  , MonadKanren(..)
+  , MonadKanren(..), Thunk
   , Matchable(..)
-  , new, thunk, LogicThunk(..)
+  , new, thunk
   , LogicFunctor(..), LogicFoldable(..)
   , LogicMonoid(..)
   ) where
@@ -30,8 +30,8 @@ import Data.String
 class (MonadLogic m, MonadLogicVar m) => MonadKanren m where
 
   conde :: [m ()] -> m ()
-  fresh :: (Unifiable a) => m (LogicThunk m a)
-  (===) :: (Unifiable a) => LogicThunk m a -> LogicThunk m a -> m ()
+  fresh :: (Unifiable a) => m (Thunk m a)
+  (===) :: (Unifiable a) => Thunk m a -> Thunk m a -> m ()
 
   conde xs = foldr interleave mzero xs
 
@@ -70,15 +70,15 @@ runAllT (MiniKanrenT m) = observeAllT (runLogicVarT (m >>= unrollLVars))
 
 
 fresh2 :: (Unifiable a, Unifiable b, MonadKanren m)
-       => m (LogicThunk m a, LogicThunk m b)
+       => m (Thunk m a, Thunk m b)
 fresh2 = liftM2 (,) fresh fresh
 
 fresh3 :: (Unifiable a, Unifiable b, Unifiable c, MonadKanren m)
-       => m (LogicThunk m a, LogicThunk m b, LogicThunk m c)
+       => m (Thunk m a, Thunk m b, Thunk m c)
 fresh3 = liftM3 (,,) fresh fresh fresh
 
 fresh4 :: (Unifiable a, Unifiable b, Unifiable c, Unifiable d, MonadKanren m)
-       => m (LogicThunk m a, LogicThunk m b, LogicThunk m c, LogicThunk m d)
+       => m (Thunk m a, Thunk m b, Thunk m c, Thunk m d)
 fresh4 = liftM4 (,,,) fresh fresh fresh fresh
 
 -- #TODO leave note on p-adic numbers 
@@ -90,7 +90,7 @@ class LogicIsStringVar a where
 instance (Unifiable a, IsString a) => LogicIsStringVar (LVar a) where
   fromStringLVar s = new $ fromString s
 
-type LogicThunk m a = m (LVar a)
+type Thunk m a = m (LVar a)
 -- add monoid and isString
 instance (LogicIsStringVar a, Monad m) => IsString (MiniKanrenT m a) where
   fromString = fromStringLVar
@@ -104,29 +104,20 @@ instance (LogicIsStringVar a, Monad m) => IsString (MiniKanrenT m a) where
 --  memptyLVar = logic_mempty
 --  mappendLVar = logic_mappend
 
-instance (LogicMonoid a, MonadKanren m) => Monoid (LogicThunk m a) where
+instance (LogicMonoid a, MonadKanren m) => Monoid (Thunk m a) where
   mempty = logic_mempty
-  mappend = bindM2 logic_mappend
+  mappend = logic_mappend
 
-new :: (Unifiable a, MonadKanren m) => a -> LogicThunk m a
+new :: (Unifiable a, MonadKanren m) => a -> Thunk m a
 new a = newLVar a
 
 -- #TODO remove?
-thunk :: (MonadKanren m) => LVar a -> LogicThunk m a
+thunk :: (MonadKanren m) => LVar a -> Thunk m a
 thunk = return 
 
---joinThunk :: (MonadKanren m) => m (LogicThunk m a) -> LogicThunk m a 
---joinThunk t = LogicThunk $ join $ liftM evalThunk t
-
-
---liftThunk
---liftThunk2
-
-
-
 class (Unifiable a) => Matchable a where
-  match :: (MonadKanren m, Unifiable b) => (a -> LogicThunk m b) -> LogicThunk m a -> LogicThunk m b
-  match_ :: (MonadKanren m) => (a -> m b) -> LogicThunk m a -> m ()
+  match :: (MonadKanren m, Unifiable b) => (a -> Thunk m b) -> Thunk m a -> Thunk m b
+  match_ :: (MonadKanren m) => (a -> m b) -> Thunk m a -> m ()
 
   match_ f t = do
     result <- fresh
@@ -135,24 +126,22 @@ class (Unifiable a) => Matchable a where
     return ()
 
 class LogicMonoid a where
-  logic_mempty :: (MonadKanren m) => LogicThunk m a
-  logic_mappend :: (MonadKanren m) => LVar a -> LVar a -> LogicThunk m a 
-
+  logic_mempty  :: (MonadKanren m) => Thunk m a
+  logic_mappend :: (MonadKanren m) => Thunk m a -> Thunk m a -> Thunk m a 
 
 class LogicFunctor f where
   logic_fmap :: (Unifiable a, Unifiable b, MonadKanren m)
-             => (LogicThunk m a -> LogicThunk m b) 
-                 -> LogicThunk m (f a) -> LogicThunk m (f b)
+             => (Thunk m a -> Thunk m b) -> Thunk m (f a) -> Thunk m (f b)
 
 class LogicFoldable f where
   logic_foldr :: (Unifiable a, Unifiable b, MonadKanren m)
-              => (LogicThunk m a -> LogicThunk m b -> LogicThunk m b) 
-                  -> LogicThunk m b -> LogicThunk m (f a) -> LogicThunk m b
+              => (Thunk m a -> Thunk m b -> Thunk m b) 
+                 -> Thunk m b -> Thunk m (f a) -> Thunk m b
 
 
 class (Unifiable a) => LogicNum a where
   logic_add :: (MonadKanren m)
-             => LVar a -> LVar a -> m (LVar a) --LogicThunk m a
+             => Thunk m a -> Thunk m a -> Thunk m a
 
 --class LogicNumVar a where
 --  logic_addLVar :: MonadKanren m => a -> a -> m a
@@ -163,16 +152,11 @@ class (Unifiable a) => LogicNum a where
 --instance (Monad m, LogicNumVar a) => Num (MiniKanrenT m a) where
 --  a + b = bindM2 logic_addLVar a b
 
-instance (MonadKanren m, LogicNum a) => Num (LogicThunk m a) where
-  a + b = bindM2 logic_add a b
+instance (MonadKanren m, LogicNum a) => Num (Thunk m a) where
+  a + b = logic_add a b
 
---can I make any instance of monadkanren automaticall be a num instance?
---class (MonadLogic m, MonadLogicVar m) => MonadKanren m where
 
---  conde :: [m ()] -> m ()
---  fresh :: (Unifiable a) => m (LogicThunk m a)
---  (===) :: (Unifiable a) => LogicThunk m a -> LogicThunk m a -> m ()
---instance (Monad m, LogicNumVar a) => Num (MiniKanrenT m (LVar a)) where
+--instance (Monad m, LogicNumVar a) => Num (MiniKanrenT Thunk m a) where
 --  a + b = bindM2 logic_add a b
 
 bindM2 :: (Monad m) => (a -> b -> m c) -> m a -> m b -> m c
@@ -181,17 +165,9 @@ bindM2 f a b = do
   b' <- b
   f a' b'
 
-boo :: (MonadKanren m) => LogicThunk m a
+boo :: (MonadKanren m) => Thunk m a
 boo = undefined
 
-
--- MiniKanrenT m (LVar a)
---class FOO a where
---  foo :: f a -> LogicThunk m ( b)
---  LVar a 
-
---instance Num (MiniKanrenT m a) where
---  a + b = logic_add a b
 
 --test = run 5 $ do
 --  a <- reifyList reifySymbol ["1", "2", "3"]

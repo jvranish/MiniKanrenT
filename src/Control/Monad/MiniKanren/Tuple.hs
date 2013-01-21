@@ -27,15 +27,12 @@ instance (Unifiable a, Unifiable b) => Matchable (Tuple a b) where
     f (Tuple a' b') === result
     result
 
-reifyTuple :: (Unifiable a, Unifiable b, MonadKanren m) => (m (LogicThunk m a), m (LogicThunk m b)) -> m (LogicThunk m (Tuple a b))
-reifyTuple (a, b) = liftM2 tuple a b
+reifyTuple :: (Unifiable a, Unifiable b, MonadKanren m) => (m (LVar a), m (LVar b)) -> m (LVar (Tuple a b))
+reifyTuple (a, b) = tuple a b
 
 tuple :: (Unifiable a, Unifiable b, MonadKanren m)
-     => LogicThunk m a -> LogicThunk m b -> LogicThunk m (Tuple a b)
-tuple a b = do
-  a' <- a
-  b' <- b
-  new $ Tuple a' b'
+     => m (LVar a) -> m (LVar b) -> m (LVar (Tuple a b))
+tuple a b = new =<< liftM2 Tuple a b
 
 
 

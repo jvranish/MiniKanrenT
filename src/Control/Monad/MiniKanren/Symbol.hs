@@ -18,9 +18,9 @@ instance Unifiable Symbol where
 instance IsString Symbol where
   fromString s = Symbol s
 
-instance (IsString a) => IsString (LogicThunk m a) where
+instance (IsString a) => IsString (Thunk m a) where
   fromString s = return $ new $ fromString s
 
-reifySymbol :: (MonadKanren m) => String -> m (LogicThunk m Symbol)
+reifySymbol :: (MonadKanren m) => String -> m (Thunk m Symbol)
 reifySymbol s = return $ new $ Symbol s
 
