@@ -10,7 +10,6 @@ module Control.Monad.LogicVarT
   ) where
 
 import Control.Monad.Trans.Class
-import Control.Monad.Reader  hiding (msum, mapM_)
 import Control.Monad.Logic hiding (msum, mapM_)
 
 import Control.Monad.PureRefT

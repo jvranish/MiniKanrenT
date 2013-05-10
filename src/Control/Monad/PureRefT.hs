@@ -17,7 +17,6 @@ module Control.Monad.PureRefT
 
 import Control.Monad.Trans.State 
 import Control.Monad.Trans.Class
-import Control.Monad.Reader  hiding (msum, mapM_)
 import Control.Monad.Logic hiding (msum, mapM_)
 import Control.Applicative
 

@@ -9,7 +9,6 @@
 
 import Control.Monad.Trans.Class
 
-import Control.Monad.Reader  hiding (msum, mapM_)
 import Control.Monad.Stream
 import Control.Monad.Logic hiding (msum, mapM_)
 

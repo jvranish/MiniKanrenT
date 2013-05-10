@@ -1,0 +1,34 @@
+Name: Relational
+Synopsis: miniKanren in Haskell
+Description: An implementation of miniKanren (a logic programming language embedded in Scheme) in Haskell 
+Version: 0.0.1
+License: MIT
+License-File: LICENSE.txt
+Author: Job Vranish <job.vranish@gmail.com>
+Maintainer: Job Vranish
+Stability: experimental
+Category: Logic
+Cabal-Version: >= 1.10.1.0
+Build-Type: Simple
+
+source-repository relational
+  type: git
+  location: git@github.com:jvranish/MiniKanrenT.git
+
+Library
+    Default-Language: Haskell2010
+    Build-Depends: base >= 4 && < 5,
+                   containers -any,
+                   transformers  >= 0.2.2.0,
+                   syb >= 0.3,
+                   logict >= 0.4 && < 0.6,
+                   stream-monad >= 0.4
+
+
+    Exposed-Modules:
+        Control.Monad.LogicVarT
+        Control.Monad.PureRefT
+        Control.Monad.Relational
+
+    ghc-options:        -Wall
+    hs-source-dirs:     src
