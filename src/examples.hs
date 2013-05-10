@@ -121,3 +121,6 @@ testUnappend = runRelation $ unappend (rSymList[Charlie]) (rSymList [Charlie, Li
 
 
 
+main :: IO ()
+main = print $ testUnappend
+
